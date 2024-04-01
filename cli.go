@@ -11,6 +11,7 @@ import (
 type Flags interface {
 	TypeFlag() string // Type returns the type of the flag
 	NameFlag() string // Name returns the name of the flag
+	ValueFlag() interface{}
 }
 
 // StringFlag represents a string flag
@@ -29,6 +30,10 @@ func (f String) NameFlag() string {
 	return f.Name
 }
 
+func (f String) ValueFlag() interface{} {
+	return f.Value
+}
+
 // BoolFlag represents a boolean flag
 type Bool struct {
 	Name  string
@@ -43,6 +48,10 @@ func (f Bool) TypeFlag() string {
 // Name returns the name of the flag
 func (f Bool) NameFlag() string {
 	return f.Name
+}
+
+func (f Bool) ValueFlag() interface{} {
+	return f.Value
 }
 
 // Context represents the context passed to the Action function of a command
@@ -61,8 +70,8 @@ type Command struct {
 	Action      func(Context)
 }
 
-// CLI represents the command line interface
-type CLI struct {
+// New creates a new CLI instance
+type New struct {
 	Name     string
 	Usage    string
 	Version  string
@@ -70,18 +79,8 @@ type CLI struct {
 	commands map[string]Command
 }
 
-// NewCLI creates a new CLI instance
-func NewCLI(name, usage, version string) *CLI {
-	return &CLI{
-		Name:     name,
-		Usage:    usage,
-		Version:  version,
-		commands: make(map[string]Command),
-	}
-}
-
 // AddCommand registers a new command
-func (c *CLI) AddCommand(cmd Command) {
+func (c *New) AddCommand(cmd Command) {
 	c.commands[cmd.Name] = cmd
 	for _, alias := range cmd.Aliases {
 		c.commands[alias] = cmd
@@ -89,7 +88,7 @@ func (c *CLI) AddCommand(cmd Command) {
 }
 
 // Exec executes a command by name
-func (c *CLI) Exec(name string, args []string) {
+func (c *New) Exec(name string, args []string) {
 	cmd, ok := c.commands[name]
 	if !ok {
 		fmt.Println("Unknown command:", name)
@@ -105,15 +104,19 @@ func (c *CLI) Exec(name string, args []string) {
 
 	// Parse command flags
 	flagValues := make(map[string]interface{})
-	for i := 0; i < len(args); i++ {
+	i := 0
+	for i < len(args) {
 		arg := args[i]
+
 		if strings.HasPrefix(arg, "-") && i+1 < len(args) {
 			flagName := arg[1:]
 			flagValue := args[i+1]
+			i += 2
+
 			// Check if the flag is valid for the command
 			validFlag := false
 			for _, flag := range cmd.Flags {
-				if flag.NameFlag() == flagName {
+				if flagName == flag.NameFlag() {
 					validFlag = true
 					// If the flag requires a value, ensure it's provided
 					_, ok := flag.(String)
@@ -124,6 +127,7 @@ func (c *CLI) Exec(name string, args []string) {
 					break
 				}
 			}
+
 			if validFlag {
 				flagValues[flagName] = flagValue
 			} else {
@@ -135,19 +139,31 @@ func (c *CLI) Exec(name string, args []string) {
 				}
 				return
 			}
+		} else {
 			i++ // Skip the next argument (flag value)
 		}
 	}
 
 	// Set default values for flags
-	// for _, flag := range cmd.Flags {
-	// 	X == ?
-	// 	if defaultValue := X; defaultValue != "" {
-	// 		if _, exists := flagValues[flag.NameFlag()]; !exists {
-	// 			flagValues[flag.NameFlag()] = defaultValue
-	// 		}
-	// 	}
-	// }
+	for _, flag := range cmd.Flags {
+		defaultValue := flag.ValueFlag()
+		if defaultValue != "" {
+			if _, exists := flagValues[flag.NameFlag()]; !exists {
+				flagValues[flag.NameFlag()] = defaultValue
+			}
+		}
+	}
+
+	// Set default values for flags
+	for _, flag := range cmd.Flags {
+		defaultValue := flag.ValueFlag()
+		if defaultValue != "" {
+			_, exists := flagValues[flag.NameFlag()]
+			if !exists {
+				flagValues[flag.NameFlag()] = defaultValue
+			}
+		}
+	}
 
 	context := Context{Flags: flagValues}
 
@@ -156,16 +172,28 @@ func (c *CLI) Exec(name string, args []string) {
 }
 
 // PrintUsage prints usage information for the CLI program
-func (c *CLI) PrintUsage() {
+func (c *New) PrintUsage() {
 	fmt.Printf("Usage: %s %s \n\n", c.Name, c.Usage)
 	fmt.Println("Commands:")
+	printedCmds := make(map[string]bool)
 	for _, cmd := range c.commands {
-		fmt.Printf("  %s\t%s\n", cmd.Name, cmd.Usage)
+		if !printedCmds[cmd.Name] {
+			fmt.Printf("  %s\t%s\n", cmd.Name, cmd.Usage)
+			printedCmds[cmd.Name] = true
+		}
+
+		// I don't know but this is to circumvent commands that are printed twice
+		for _, alias := range cmd.Aliases {
+			if !printedCmds[alias] {
+				fmt.Print()
+				printedCmds[alias] = true
+			}
+		}
 	}
 }
 
 // PrintCommandHelp prints help information for a specific command
-func (c *CLI) PrintCommandHelp(name string) {
+func (c *New) PrintCommandHelp(name string) {
 	cmd, ok := c.commands[name]
 	if !ok {
 		fmt.Println("Unknown command:", name)
@@ -207,7 +235,12 @@ func (c *CLI) PrintCommandHelp(name string) {
 }
 
 func main() {
-	cli := NewCLI("mycli", "<command> [options]", "1.0.0")
+	cli := New{
+		Name:     "test",
+		Usage:    "[commands] [flag]",
+		Version:  "experimental",
+		commands: make(map[string]Command),
+	}
 
 	echoCmd := Command{
 		Name:    "echo",
@@ -216,16 +249,22 @@ func main() {
 		Help:    "Echoes the provided message",
 		Flags: []Flags{
 			String{
-				Name:  "message",
-				Value: "default",
+				Name:  "m",
+				Value: "cute",
+			},
+			String{
+				Name:  "cute",
+				Value: "mumumu",
 			},
 		},
 		Action: func(c Context) {
-			// Access flag values from the Context
-			message, _ := c.Flags["message"].(string)
+			message, _ := c.Flags["m"].(string)
+			msg, _ := c.Flags["cute"].(string)
 			fmt.Println("Echo:", message)
+			fmt.Println("Echo:", msg)
 		},
 	}
+
 	cli.AddCommand(echoCmd)
 
 	// Parse command line arguments
