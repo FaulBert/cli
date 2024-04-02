@@ -3,10 +3,9 @@ package cli
 import "flag"
 
 type IntFlag struct {
-	Name    string
-	Value   int
-	Default int
-	Usage   string
+	Name  string
+	Value int
+	Usage string
 }
 
 type Int struct {
@@ -26,7 +25,7 @@ func (f *IntFlag) GetValue() interface{} {
 }
 
 func (f *IntFlag) Parse(flagSet *flag.FlagSet) {
-	flagSet.IntVar(&f.Value, f.Name, f.Default, f.Usage)
+	flagSet.IntVar(&f.Value, f.Name, f.Value, f.Usage)
 }
 
 func (ic Int) Get(name string) int {

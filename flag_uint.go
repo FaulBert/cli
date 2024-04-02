@@ -3,10 +3,9 @@ package cli
 import "flag"
 
 type UintFlag struct {
-	Name    string
-	Value   uint
-	Default uint
-	Usage   string
+	Name  string
+	Value uint
+	Usage string
 }
 
 type Uint struct {
@@ -18,7 +17,7 @@ func (c Context) Uint() Uint {
 }
 
 func (f *UintFlag) Parse(flagSet *flag.FlagSet) {
-	flagSet.UintVar(&f.Value, f.Name, f.Default, f.Usage)
+	flagSet.UintVar(&f.Value, f.Name, f.Value, f.Usage)
 }
 
 func (f *UintFlag) GetName() string {
