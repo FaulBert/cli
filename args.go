@@ -12,9 +12,9 @@ func (a Args) Len(i int) int {
 }
 
 // Get returns the argument at the specified index.
-func (a Args) Get(index int) string {
-	if index >= 0 && index < len(a) {
-		return a[index]
+func (a Args) Get(i int) string {
+	if i >= 0 && i < len(a) {
+		return a[i]
 	}
 	return ""
 }
