@@ -1,78 +1,56 @@
-package main
+package cli
 
 import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
+	"text/template"
 )
+
+// Context represents the context of a command execution.
+type Context struct {
+	Args  Args
+	Flags map[string]interface{}
+}
+
+type ActionFunc func(Context)
 
 type Command struct {
 	Name        string
 	Usage       string
 	Description string
-	Action      func(Context)
+	Action      ActionFunc
 	Flags       []Flag
-}
-
-type Flag interface {
-	Parse(*flag.FlagSet)
-	GetName() string
-}
-
-type Context struct {
-	Args  []string
-	Flags map[string]interface{}
-}
-
-func main() {
-	app := App{
-		Name:    "cli",
-		Version: "1.0.0",
-	}
-
-	echoCmd := Command{
-		Name:        "echo",
-		Usage:       "[option] [arg]",
-		Description: "Print text",
-		Action: func(c Context) {
-			text := c.Flags["m"].(string)
-			fmt.Println(text)
-		},
-		Flags: []Flag{
-			&StringFlag{
-				Name:  "m",
-				Usage: "print special message",
-			},
-			&BoolFlag{
-				Name:  "dl",
-				Usage: "download",
-			},
-		},
-	}
-
-	app.AddCommand(echoCmd)
-	app.Run(os.Args)
+	Subcommands []*Command
+	Help        string
 }
 
 type App struct {
 	Name     string
 	Version  string
-	Commands []Command
+	Commands []*Command
+	Help     string
 }
 
-func (app *App) AddCommand(cmd Command) {
+func (app *App) AddCommand(cmd *Command) {
 	app.Commands = append(app.Commands, cmd)
 }
 
 func (app *App) Run(args []string) {
-	if len(args) < 2 {
-		fmt.Println("Usage: " + app.Name + " [command]")
+	if len(args) < 2 || args[1] == "help" {
+		printHelp(app)
 		return
 	}
 
 	commandName := args[1]
 	for _, cmd := range app.Commands {
 		if cmd.Name == commandName {
+			if len(args) == 3 && args[2] == "help" {
+				printHelp(cmd)
+				return
+			}
+
 			flagSet := flag.NewFlagSet(commandName, flag.ExitOnError)
 			for _, flag := range cmd.Flags {
 				flag.Parse(flagSet)
@@ -89,41 +67,29 @@ func (app *App) Run(args []string) {
 	fmt.Println("Command not found:", commandName)
 }
 
-type StringFlag struct {
-	Name  string
-	Usage string
-}
-
-func (f *StringFlag) GetName() string {
-	return f.Name
-}
-
-func (f *StringFlag) Parse(flagSet *flag.FlagSet) {
-	flagSet.String(f.Name, "", f.Usage)
-}
-
-type BoolFlag struct {
-	Name  string
-	Usage string
-}
-
-func (f *BoolFlag) GetName() string {
-	return f.Name
-}
-
-func (f *BoolFlag) Parse(flagSet *flag.FlagSet) {
-	flagSet.Bool(f.Name, false, f.Usage)
-}
-
-func parseFlags(flagSet *flag.FlagSet, flags []Flag) map[string]interface{} {
-	flagValues := make(map[string]interface{})
-	flagSet.VisitAll(func(f *flag.Flag) {
-		for _, flag := range flags {
-			if f.Name == flag.GetName() {
-				flagValues[f.Name] = f.Value.String()
-				break
-			}
+func printHelp(data interface{}) {
+	switch d := data.(type) {
+	case *Command:
+		tmpl, err := template.New("help").Parse(d.Help)
+		if err != nil {
+			fmt.Println("Error parsing help template:", err)
+			return
 		}
-	})
-	return flagValues
+		err = tmpl.Execute(os.Stdout, d)
+		if err != nil {
+			fmt.Println("Error executing help template:", err)
+		}
+	case *App:
+		tmpl, err := template.New("help").Parse(d.Help)
+		if err != nil {
+			fmt.Println("Error parsing help template:", err)
+			return
+		}
+		err = tmpl.Execute(os.Stdout, d)
+		if err != nil {
+			fmt.Println("Error executing help template:", err)
+		}
+	default:
+		fmt.Println("Unknown type:", reflect.TypeOf(data))
+	}
 }
