@@ -26,7 +26,7 @@ func main() {
 		Flags:       cmdFlags,
 		Description: "simply run",
 		Action: func(ctx cli.Context) {
-			if flagValue := ctx.Flags["m"]; flagValue != nil {
+			if flagValue := ctx.String().Get("m"); flagValue != nil {
 				fmt.Printf("run command invoked with m flag value %s \n", flagValue)
 				return
 			}
