@@ -43,12 +43,21 @@ func findCommand(cmd *Command, args []string) *Command {
 
 	nextCmdName := args[0]
 	for _, subCmd := range cmd.Subcommands {
-		if subCmd.Name == nextCmdName {
+		if subCmd.Name == nextCmdName || contains(subCmd.Alias, nextCmdName) {
 			return findCommand(subCmd, args[1:])
 		}
 	}
 
 	return cmd
+}
+
+func contains(slice []string, name string) bool {
+	for _, s := range slice {
+		if s == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (app *App) Run(args []string) {
