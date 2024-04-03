@@ -24,11 +24,9 @@ func TestSubCommandApp(t *testing.T) {
 		Flags:       cmdFlags,
 		Description: "simply run",
 		Action: func(ctx Context) {
-			if flagValue := ctx.String().Get("m"); flagValue != nil {
-				fmt.Printf("run command invoked with m flag value %s \n", flagValue)
-				return
-			}
-			fmt.Println("run command invoked")
+			flagValue := ctx.String().Get("m")
+
+			fmt.Printf("run command invoked with m flag value %s \n", flagValue)
 		},
 	}
 	dummyApp.AddCommand(cmd)
