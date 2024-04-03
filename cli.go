@@ -2,7 +2,6 @@ package cli
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 )
 
@@ -36,9 +35,9 @@ func (app *App) AddCommand(cmd *Command) {
 	app.Commands = append(app.Commands, cmd)
 }
 
-func findCommand(cmd *Command, args []string) *Command {
+func findCommand(cmd *Command, args []string) (*Command, string) {
 	if len(args) == 0 || len(cmd.Subcommands) == 0 {
-		return cmd
+		return cmd, ""
 	}
 
 	nextCmdName := args[0]
@@ -48,7 +47,7 @@ func findCommand(cmd *Command, args []string) *Command {
 		}
 	}
 
-	return cmd
+	return cmd, nextCmdName
 }
 
 func contains(slice []string, name string) bool {
@@ -60,7 +59,7 @@ func contains(slice []string, name string) bool {
 	return false
 }
 
-func (app *App) Run(args []string) {
+func (app *App) Run(args []string) (err error) {
 	if len(args) <= 1 || args[1] == "-h" || args[1] == "--help" {
 		printHelp(app, app)
 		return
@@ -71,15 +70,17 @@ func (app *App) Run(args []string) {
 		printHelp(app, app)
 	}
 
-	flagSet.Parse(args[1:])
+	err = flagSet.Parse(args[1:])
+	if err != nil {
+		return err
+	}
 
 	if len(flagSet.Args()) == 0 {
-		fmt.Println("No command provided")
-		return
+		return ErrNoCommandProvided
 	}
 
 	// Find the deepest subcommand
-	cmd := findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, flagSet.Args())
+	cmd, cmdName := findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, flagSet.Args())
 
 	// Check if --help flag is provided
 	for _, arg := range flagSet.Args() {
@@ -99,8 +100,14 @@ func (app *App) Run(args []string) {
 		}
 	}
 
+	// if subcommand not found, action will be empty.
+	if cmd.Action == nil {
+		return ErrCommandNotRegistered(cmdName)
+	}
+
 	cmd.Action(Context{
 		Args:  flagSet.Args(),
 		Flags: parseFlags(flagSet, cmd.Flags),
 	})
+	return
 }
