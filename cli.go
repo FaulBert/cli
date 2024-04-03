@@ -3,10 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"os"
-	"reflect"
 	"strings"
-	"text/template"
 )
 
 // Context represents the context of a command execution.
@@ -21,10 +18,10 @@ type Command struct {
 	Name         string
 	Usage        string
 	Description  string
+	Alias        []string
 	Action       ActionFunc
 	Flags        []Flag
 	Subcommands  []*Command
-	Help         string
 	HelpTemplate string
 }
 
@@ -32,7 +29,6 @@ type App struct {
 	Name         string
 	Version      string
 	Commands     []*Command
-	Help         string
 	HelpTemplate string
 }
 
@@ -56,66 +52,46 @@ func findCommand(cmd *Command, args []string) *Command {
 }
 
 func (app *App) Run(args []string) {
-	help := len(args) < 2 || args[1] == "help" || args[1] == "-h" || args[1] == "--help"
-	if help {
-		if app.Help != "" {
-			fmt.Print(app.Help)
-			return
-		}
-		renderText(app)
+	if len(args) <= 1 || args[1] == "-h" || args[1] == "--help" {
+		printHelp(app, app)
+		return
+	}
+
+	flagSet := flag.NewFlagSet(app.Name, flag.ExitOnError)
+	flag.Usage = func() {
+		printHelp(app, app)
+	}
+
+	flagSet.Parse(args[1:])
+
+	if len(flagSet.Args()) == 0 {
+		fmt.Println("No command provided")
 		return
 	}
 
 	// Find the deepest subcommand
-	var cmd *Command
-	if len(args) >= 2 {
-		cmd = findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, args[1:])
+	cmd := findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, flagSet.Args())
+
+	// Check if --help flag is provided
+	for _, arg := range flagSet.Args() {
+		if arg == "--help" || arg == "-h" {
+			printHelp(app, cmd)
+			return
+		}
 	}
 
-	// Execute the action of the deepest subcommand
-	flagSet := flag.NewFlagSet(cmd.Name, flag.ExitOnError)
 	for _, flag := range cmd.Flags {
 		flag.Parse(flagSet)
 	}
 
-	if len(args) >= 3 && !strings.HasPrefix(args[2], "-") {
-		flagSet.Parse(args[len(args)-len(flagSet.Args()):])
-		cmd.Action(Context{
-			Args:  flagSet.Args(),
-			Flags: parseFlags(flagSet, cmd.Flags),
-		})
-	} else {
-		flagSet.Parse(args[2:])
-		cmd.Action(Context{
-			Args:  flagSet.Args(),
-			Flags: parseFlags(flagSet, cmd.Flags),
-		})
+	for i, arg := range flagSet.Args() {
+		if strings.HasPrefix(arg, "-") {
+			flagSet.Parse(args[1+i:])
+		}
 	}
-}
 
-func renderText(data interface{}) {
-	switch d := data.(type) {
-	case *Command:
-		tmpl, err := template.New("help").Parse(d.HelpTemplate)
-		if err != nil {
-			fmt.Println("Error parsing help template:", err)
-			return
-		}
-		err = tmpl.Execute(os.Stdout, d)
-		if err != nil {
-			fmt.Println("Error executing help template:", err)
-		}
-	case *App:
-		tmpl, err := template.New("help").Parse(d.HelpTemplate)
-		if err != nil {
-			fmt.Println("Error parsing help template:", err)
-			return
-		}
-		err = tmpl.Execute(os.Stdout, d)
-		if err != nil {
-			fmt.Println("Error executing help template:", err)
-		}
-	default:
-		fmt.Println("Unknown type:", reflect.TypeOf(data))
-	}
+	cmd.Action(Context{
+		Args:  flagSet.Args(),
+		Flags: parseFlags(flagSet, cmd.Flags),
+	})
 }
