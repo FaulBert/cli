@@ -4,7 +4,8 @@ import "fmt"
 
 // make error centralize, for convinient in error uniformity.
 var (
-	ErrNoCommandProvided = fmt.Errorf("no command provided")
+	ErrNoCommandProvided    = fmt.Errorf("no command provided")
+	ErrAppActionNotProvided = fmt.Errorf("app action not provided")
 )
 
 func ErrCommandNotRegistered(command string) error {

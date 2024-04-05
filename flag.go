@@ -8,6 +8,7 @@ type Flag interface {
 	Parse(*flag.FlagSet)
 	GetName() string
 	GetValue() interface{}
+	GetAction() *ActionFunc
 }
 
 func parseFlags(flagSet *flag.FlagSet, flags []Flag) map[string]interface{} {
