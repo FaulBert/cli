@@ -8,5 +8,9 @@ var (
 )
 
 func ErrCommandNotRegistered(command string) error {
-	return fmt.Errorf("command %s not registered", command)
+	return fmt.Errorf("Command %s not registered", command)
+}
+
+func ErrCommandNotFound(command string) error {
+	return fmt.Errorf("Command %s not found", command)
 }

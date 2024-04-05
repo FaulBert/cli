@@ -16,6 +16,7 @@ type ActionFunc func(Context)
 type Command struct {
 	Name         string
 	Usage        string
+	Short        string
 	Description  string
 	Alias        []string
 	Action       ActionFunc
@@ -27,12 +28,119 @@ type Command struct {
 type App struct {
 	Name         string
 	Version      string
+	Description  string
+	Action       ActionFunc
+	Flags        []Flag
 	Commands     []*Command
 	HelpTemplate string
 }
 
 func (app *App) AddCommand(cmd *Command) {
 	app.Commands = append(app.Commands, cmd)
+}
+
+func (app *App) Run(args []string) (err error) {
+	flagSet := flag.NewFlagSet(app.Name, flag.ExitOnError)
+	flag.Usage = func() {
+		printHelp(app, app)
+	}
+
+	if len(args) <= 1 || strings.HasPrefix(args[0], "-") {
+		err = flagSet.Parse(args[0:])
+		if err != nil {
+			return err
+		}
+		runApp(args, app, flagSet)
+	}
+	if len(args) >= 2 {
+		err = flagSet.Parse(args[1:])
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(args[1], "-") || app.Commands == nil {
+			err := runApp(args, app, flagSet)
+			if err != nil {
+				return err
+			}
+		}
+		if !strings.HasPrefix(args[1], "-") && app.Commands != nil {
+			err := runCmd(args, app, flagSet)
+			if err != nil {
+				return err
+			}
+		}
+
+		if args[1] == "-h" || args[1] == "--help" {
+			printHelp(app, app)
+			return
+		}
+	}
+
+	return
+}
+
+func runApp(args []string, app *App, flagSet *flag.FlagSet) (err error) {
+	if len(flagSet.Args()) == 0 {
+		return ErrNoCommandProvided
+	}
+
+	for _, flag := range app.Flags {
+		flag.Parse(flagSet)
+	}
+
+	for i, arg := range flagSet.Args() {
+		if strings.HasPrefix(arg, "-") {
+			flagSet.Parse(args[1+i:])
+		}
+	}
+
+	app.Action(Context{
+		Args:  flag.Args(),
+		Flags: parseFlags(flagSet, app.Flags),
+	})
+	return
+}
+
+func runCmd(args []string, app *App, flagSet *flag.FlagSet) error {
+	if len(flagSet.Args()) == 0 {
+		return ErrNoCommandProvided
+	}
+
+	// Find the deepest subcommand
+	cmd, cmdName := findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, flagSet.Args())
+
+	if cmdName != "" {
+		return ErrCommandNotFound(cmdName)
+	}
+
+	// Check if --help flag is provided
+	for _, arg := range flagSet.Args() {
+		if arg == "--help" || arg == "-h" {
+			printHelp(app, cmd)
+			return nil
+		}
+	}
+
+	// if subcommand not found, action will be empty.
+	if cmd.Action == nil {
+		return ErrCommandNotRegistered(cmdName)
+	}
+
+	for _, flag := range cmd.Flags {
+		flag.Parse(flagSet)
+	}
+
+	for i, arg := range flagSet.Args() {
+		if strings.HasPrefix(arg, "-") {
+			flagSet.Parse(args[1+i:])
+		}
+	}
+
+	cmd.Action(Context{
+		Args:  flagSet.Args(),
+		Flags: parseFlags(flagSet, cmd.Flags),
+	})
+	return nil
 }
 
 func findCommand(cmd *Command, args []string) (*Command, string) {
@@ -57,57 +165,4 @@ func contains(slice []string, name string) bool {
 		}
 	}
 	return false
-}
-
-func (app *App) Run(args []string) (err error) {
-	if len(args) <= 1 || args[1] == "-h" || args[1] == "--help" {
-		printHelp(app, app)
-		return
-	}
-
-	flagSet := flag.NewFlagSet(app.Name, flag.ExitOnError)
-	flag.Usage = func() {
-		printHelp(app, app)
-	}
-
-	err = flagSet.Parse(args[1:])
-	if err != nil {
-		return err
-	}
-
-	if len(flagSet.Args()) == 0 {
-		return ErrNoCommandProvided
-	}
-
-	// Find the deepest subcommand
-	cmd, cmdName := findCommand(&Command{Name: app.Name, Subcommands: app.Commands}, flagSet.Args())
-
-	// Check if --help flag is provided
-	for _, arg := range flagSet.Args() {
-		if arg == "--help" || arg == "-h" {
-			printHelp(app, cmd)
-			return
-		}
-	}
-
-	for _, flag := range cmd.Flags {
-		flag.Parse(flagSet)
-	}
-
-	for i, arg := range flagSet.Args() {
-		if strings.HasPrefix(arg, "-") {
-			flagSet.Parse(args[1+i:])
-		}
-	}
-
-	// if subcommand not found, action will be empty.
-	if cmd.Action == nil {
-		return ErrCommandNotRegistered(cmdName)
-	}
-
-	cmd.Action(Context{
-		Args:  flagSet.Args(),
-		Flags: parseFlags(flagSet, cmd.Flags),
-	})
-	return
 }

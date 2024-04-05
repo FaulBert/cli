@@ -8,11 +8,18 @@ import (
 	"text/template"
 )
 
-const defaultAppHelpTemplate = `{{.Name}}`
-const defaultCmdHelpTemplate = `Usage: {{.Name}} {{.CmdName}} {{ if .Usage}}{{.Usage}}{{end}}{{if .Alias}}
-Aliases: {{join .Alias ", "}}{{end}}
-   
-   {{if .Description}}{{.Description}}{{end}}`
+const defaultAppHelpTemplate = `{{.Name}}{{if .Version}}
+
+Version:
+   {{.Version}}{{end}}`
+const defaultCmdHelpTemplate = `Usage: {{.Name}} {{.CmdName}} {{ if .Usage}}{{.Usage}}{{end}}{{if .Short}}
+
+   {{.Short}}{{end}}{{if .Alias}}
+
+Aliases: {{join .Alias ", "}}{{end}}{{if .Description}}
+
+Description:
+   {{.Description}}{{end}}`
 
 func printHelp(app *App, data interface{}) {
 	switch d := data.(type) {
@@ -56,7 +63,8 @@ func appHelpParser(app *App) {
 		return
 	}
 	err = tmpl.Execute(os.Stdout, map[string]interface{}{
-		"Name": app.Name,
+		"Name":    app.Name,
+		"Version": app.Version,
 	})
 	if err != nil {
 		fmt.Println("Error executing app's help template:", err)
