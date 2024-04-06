@@ -12,9 +12,6 @@ func TestSubCommandApp(t *testing.T) {
 		&StringFlag{
 			Name:  "m",
 			Value: "moe",
-			Action: func(cli Context) {
-				fmt.Println("flag m value ", cli.String().Get("m"))
-			},
 		},
 	}
 	dummyApp := App{

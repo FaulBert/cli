@@ -5,10 +5,9 @@ import (
 )
 
 type StringFlag struct {
-	Name   string
-	Value  string
-	Usage  string
-	Action ActionFunc
+	Name  string
+	Value string
+	Usage string
 }
 
 func (f *StringFlag) GetName() string {
@@ -21,10 +20,6 @@ func (f *StringFlag) GetValue() interface{} {
 
 func (f *StringFlag) Parse(flagSet *flag.FlagSet) {
 	flagSet.StringVar(&f.Value, f.Name, f.Value, f.Usage)
-}
-
-func (f *StringFlag) GetAction() *ActionFunc {
-	return &f.Action
 }
 
 type String struct {

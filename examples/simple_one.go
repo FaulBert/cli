@@ -13,9 +13,6 @@ func main() {
 		&cli.StringFlag{
 			Name:  "m",
 			Value: "moe",
-			Action: func(cli cli.Context) {
-				fmt.Println("flag m value ", cli.String().Get("m"))
-			},
 		},
 	}
 	app := cli.App{
