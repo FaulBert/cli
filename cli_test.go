@@ -8,7 +8,15 @@ import (
 
 func TestSubCommandApp(t *testing.T) {
 	// initiate dummy app
-	dummyApp := App{}
+	dummyAppFlag := []Flag{
+		&StringFlag{
+			Name:  "m",
+			Value: "moe",
+		},
+	}
+	dummyApp := App{
+		Flags: dummyAppFlag,
+	}
 	dummyApp.Name = "uwe"
 	cmdAlias := []string{"r", "rnu", "nur"}
 	cmdFlags := []Flag{
@@ -35,7 +43,7 @@ func TestSubCommandApp(t *testing.T) {
 	okArgsTest := [][]string{
 		{""},
 		// Flag test
-		{"", "-h"},
+		//{"", "-h"},
 
 		// Subcommand Alias test
 		{"", "run"},

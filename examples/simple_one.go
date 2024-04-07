@@ -9,8 +9,19 @@ import (
 
 func main() {
 	// initiate dummy app
-	app := cli.App{}
-	app.Name = "uwe"
+	appFlag := []cli.Flag{
+		&cli.StringFlag{
+			Name:  "m",
+			Value: "moe",
+		},
+	}
+	app := cli.App{
+		Name:  "moe",
+		Flags: appFlag,
+		Action: func(ctx cli.Context) {
+			fmt.Println("flag : ", ctx.String().Get("m"))
+		},
+	}
 	cmdAlias := []string{"r", "rnu", "nur"}
 	cmdFlags := []cli.Flag{
 		&cli.StringFlag{

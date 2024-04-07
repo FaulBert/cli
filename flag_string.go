@@ -1,6 +1,8 @@
 package cli
 
-import "flag"
+import (
+	"flag"
+)
 
 type StringFlag struct {
 	Name  string

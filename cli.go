@@ -45,45 +45,35 @@ func (app *App) Run(args []string) (err error) {
 		printHelp(app, app)
 	}
 
-	if app.Action == nil && len(args) <= 1 {
-		printHelp(app, app)
-		return
-	}
-
-	if len(args) <= 1 && strings.HasPrefix(args[0], "-") {
+	if len(args) <= 1 || strings.HasPrefix(args[1], "-") {
 		err = flagSet.Parse(args[0:])
 		if err != nil {
 			return err
 		}
-		err := runApp(args, app, flagSet)
-		if err != nil {
-			return err
-		}
+		runApp(args, app, flagSet)
+		return
 	}
-
 	if len(args) >= 2 {
 		err = flagSet.Parse(args[1:])
 		if err != nil {
 			return err
 		}
-
-		if args[1] == "-h" || args[1] == "--help" {
-			printHelp(app, app)
-			return
-		}
-
 		if strings.HasPrefix(args[1], "-") || app.Commands == nil {
 			err := runApp(args, app, flagSet)
 			if err != nil {
 				return err
 			}
 		}
-
 		if !strings.HasPrefix(args[1], "-") && app.Commands != nil {
 			err := runCmd(args, app, flagSet)
 			if err != nil {
 				return err
 			}
+		}
+
+		if args[1] == "-h" || args[1] == "--help" {
+			printHelp(app, app)
+			return
 		}
 	}
 
@@ -95,6 +85,11 @@ func runApp(args []string, app *App, flagSet *flag.FlagSet) (err error) {
 		return ErrNoCommandProvided
 	}
 
+	// MAGIC!!!, must odd ["","-m","nazan"], ["-m","nazan"] wouldn't work
+	// this pattern happen because, os.Args always return [<binary name>, "flag","flag value"],
+	// the flag package follow those doctrine.
+	args = append([]string{""}, args...)
+
 	for _, flag := range app.Flags {
 		flag.Parse(flagSet)
 	}
@@ -103,6 +98,10 @@ func runApp(args []string, app *App, flagSet *flag.FlagSet) (err error) {
 		if strings.HasPrefix(arg, "-") {
 			flagSet.Parse(args[1+i:])
 		}
+	}
+
+	if app.Action == nil {
+		return ErrAppActionNotProvided
 	}
 
 	app.Action(Context{
