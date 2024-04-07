@@ -16,12 +16,12 @@ func main() {
 		},
 	}
 	app := cli.App{
+		Name:  "moe",
 		Flags: appFlag,
 		Action: func(ctx cli.Context) {
 			fmt.Println("flag : ", ctx.String().Get("m"))
 		},
 	}
-	app.Name = "uwe"
 	cmdAlias := []string{"r", "rnu", "nur"}
 	cmdFlags := []cli.Flag{
 		&cli.StringFlag{
@@ -48,5 +48,5 @@ func main() {
 	// if need more, just create new cli.Command
 	// then app.AddCommand it
 
-	fmt.Println(app.Run(os.Args))
+	app.Run(os.Args)
 }

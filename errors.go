@@ -4,8 +4,9 @@ import "fmt"
 
 // make error centralize, for convinient in error uniformity.
 var (
-	ErrNoCommandProvided   = fmt.Errorf("no command provided")
-	ErrParsingHelpTemplate = fmt.Errorf("Error parsing help template")
+	ErrNoCommandProvided    = fmt.Errorf("no command provided")
+	ErrAppActionNotProvided = fmt.Errorf("app action not provided")
+	ErrParsingHelpTemplate  = fmt.Errorf("Error parsing help template")
 )
 
 func ErrFlagNotFound(flag string) error {

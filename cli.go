@@ -45,8 +45,7 @@ func (app *App) Run(args []string) (err error) {
 		printHelp(app, app)
 	}
 
-	if len(args) <= 1 || strings.HasPrefix(args[1], "-"){
-		// args[1] = strings.ReplaceAll(args[1], "-", "")
+	if len(args) <= 1 || strings.HasPrefix(args[1], "-") {
 		err = flagSet.Parse(args[0:])
 		if err != nil {
 			return err
