@@ -22,3 +22,34 @@ func parseFlags(flagSet *flag.FlagSet, flags []Flag) map[string]interface{} {
 	})
 	return flagValues
 }
+
+// Assume cmd is an instance of Command
+func getFlags(cmd *Command) map[string]interface{} {
+	flagsMap := make(map[string]interface{})
+	for _, flag := range cmd.Flags {
+		switch f := flag.(type) {
+		case *StringFlag:
+			flagsMap[f.Name] = f
+		case *IntFlag:
+			flagsMap[f.Name] = f
+		}
+	}
+	return flagsMap
+}
+
+// Assume cmd is an instance of Command
+func getFlagValue(cmd *Command, flagName string) (interface{}, error) {
+	for _, flag := range cmd.Flags {
+		switch f := flag.(type) {
+		case *StringFlag:
+			if f.Name == flagName {
+				return f.Value, nil
+			}
+		case *IntFlag:
+			if f.Name == flagName {
+				return f.Value, nil
+			}
+		}
+	}
+	return nil, ErrFlagNotFound(flagName)
+}
