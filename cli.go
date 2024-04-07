@@ -45,12 +45,14 @@ func (app *App) Run(args []string) (err error) {
 		printHelp(app, app)
 	}
 
-	if len(args) <= 1 || strings.HasPrefix(args[0], "-") {
+	if len(args) <= 1 || strings.HasPrefix(args[1], "-"){
+		// args[1] = strings.ReplaceAll(args[1], "-", "")
 		err = flagSet.Parse(args[0:])
 		if err != nil {
 			return err
 		}
 		runApp(args, app, flagSet)
+		return
 	}
 	if len(args) >= 2 {
 		err = flagSet.Parse(args[1:])
@@ -84,6 +86,11 @@ func runApp(args []string, app *App, flagSet *flag.FlagSet) (err error) {
 		return ErrNoCommandProvided
 	}
 
+	// MAGIC!!!, must odd ["","-m","nazan"], ["-m","nazan"] wouldn't work
+	// this pattern happen because, os.Args always return [<binary name>, "flag","flag value"],
+	// the flag package follow those doctrine.
+	args = append([]string{""}, args...)
+
 	for _, flag := range app.Flags {
 		flag.Parse(flagSet)
 	}
@@ -92,6 +99,10 @@ func runApp(args []string, app *App, flagSet *flag.FlagSet) (err error) {
 		if strings.HasPrefix(arg, "-") {
 			flagSet.Parse(args[1+i:])
 		}
+	}
+
+	if app.Action == nil {
+		return ErrAppActionNotProvided
 	}
 
 	app.Action(Context{
