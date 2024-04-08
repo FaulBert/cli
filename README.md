@@ -1,7 +1,5 @@
 # nazhard/cli
 
----
-
 Cute and easy-to-use CLI Framework! Made as simple as possible with a few features...
 
 I'm not sure you'll actually use this simple framework.
@@ -21,8 +19,9 @@ import (
 )
 
 func main() {
-    app := cli.App{}
-    app.Name = "moe"
+    app := cli.App{
+        Name: "moe",
+    }
 
     cmd := &cli.Command{
         Name:        "nii-chan",
@@ -34,6 +33,10 @@ func main() {
     }
 
     app.AddCommand(cmd)
-    app.Run(os.Args)
+
+    err := app.Run(os.Args)
+    if err != nil {
+        fmt.Println(err)
+    }
 }
 ```
