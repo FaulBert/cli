@@ -19,6 +19,7 @@ type Command struct {
 	Short        string
 	Description  string
 	Alias        []string
+	Args         []string
 	Action       ActionFunc
 	Flags        []Flag
 	Subcommands  []*Command
@@ -50,14 +51,24 @@ func (app *App) Run(args []string) (err error) {
 		if err != nil {
 			return err
 		}
+
+		if len(args) > 1 {
+			if args[1] == "-h" || args[1] == "--help" {
+				printHelp(app, app)
+				return
+			}
+		}
 		runApp(args, app, flagSet)
+
 		return
 	}
+
 	if len(args) >= 2 {
 		err = flagSet.Parse(args[1:])
 		if err != nil {
 			return err
 		}
+
 		if strings.HasPrefix(args[1], "-") || app.Commands == nil {
 			err := runApp(args, app, flagSet)
 			if err != nil {
@@ -69,11 +80,6 @@ func (app *App) Run(args []string) (err error) {
 			if err != nil {
 				return err
 			}
-		}
-
-		if args[1] == "-h" || args[1] == "--help" {
-			printHelp(app, app)
-			return
 		}
 	}
 
